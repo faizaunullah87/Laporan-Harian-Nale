@@ -5,18 +5,27 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 import datetime
 
-# Tambahkan parameter 'template_file' di fungsi ini
-def generate_report(template_file, tgl, lokasi, kegiatan_data, kendala_data, followup_data, ip_photos):
+# --- FUNGSI BARU: Mengubah format tanggal menjadi teks Indonesia ---
+def format_tanggal_indo(tgl):
+    bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+                  "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    return f"{tgl.day} {bulan_indo[tgl.month]} {tgl.year}"
+
+def generate_report(template_file, tgl_indo, lokasi, kegiatan_data, kendala_data, followup_data, ip_photos):
     try:
-        # Kodenya sekarang membaca file sesuai pilihanmu di web
         doc = Document(template_file)
     except Exception as e:
         st.error(f"Error: File '{template_file}' tidak ditemukan di folder!")
         return None
 
     # 1. INFORMASI UMUM (Tabel Index 0)
-    doc.tables[0].cell(0, 3).text = tgl
-    doc.tables[0].cell(1, 3).text = lokasi
+    # Menggunakan .add_run() agar teks ditambahkan di SAMPING tulisan yang sudah ada
+    # Catatan: Jika di template tulisan "Tanggal" ada di kolom lain, kamu bisa ubah index [0, 3] ke kolom yang sesuai.
+    cell_tgl = doc.tables[0].cell(0, 3).paragraphs[0]
+    cell_tgl.add_run(" " + tgl_indo if cell_tgl.text else tgl_indo)
+
+    cell_lokasi = doc.tables[0].cell(1, 3).paragraphs[0]
+    cell_lokasi.add_run(" " + lokasi if cell_lokasi.text else lokasi)
 
     # 2. KEGIATAN HARIAN (Tabel Index 1)
     tabel_kegiatan = doc.tables[1]
@@ -99,23 +108,22 @@ st.title("📊 Auto Report Generator")
 
 with st.sidebar:
     st.header("⚙️ Pengaturan Template")
-    # TAMPILAN PEMILIHAN TEMPLATE
     pilihan_template = st.radio(
         "Pilih Warna Kop Surat:",
         ["Template Biru", "Template Orange"]
     )
     
-    # Logika penentuan nama file
-    if pilihan_template == "Template Biru":
-        file_template = "template_biru.docx"
-    else:
-        file_template = "template_orange.docx"
+    file_template = "template_biru.docx" if pilihan_template == "Template Biru" else "template_orange.docx"
 
     st.divider()
     st.header("📝 Informasi Umum")
-    tgl = st.date_input("Tanggal Report", datetime.date.today())
+    # Input tanggal dari user
+    tgl_input = st.date_input("Tanggal Report", datetime.date.today())
     lok = st.text_input("Lokasi / Site", "UNEJ")
-    st.info(f"File yang digunakan saat ini: {file_template}")
+    
+    # Mengubah format inputan kalender menjadi format Indonesia (ex: 1 April 2025)
+    teks_tgl_indo = format_tanggal_indo(tgl_input)
+    st.info(f"Tanggal di laporan: {teks_tgl_indo}")
 
 # --- FORM KEGIATAN HARIAN ---
 st.subheader("2. Kegiatan Harian")
@@ -184,18 +192,19 @@ for idx, loc in enumerate(locations):
 
 st.divider()
 if st.button("🚀 Generate Report", type="primary", use_container_width=True):
-    # Pass 'file_template' ke dalam fungsi
-    final_docx = generate_report(file_template, str(tgl), lok, kegiatan_list, kendala_list, followup_list, ip_photos_data)
+    # Pass teks_tgl_indo ke fungsi generate
+    final_docx = generate_report(file_template, teks_tgl_indo, lok, kegiatan_list, kendala_list, followup_list, ip_photos_data)
     
     if final_docx:
-        st.success(f"Laporan berhasil dibuat menggunakan {pilihan_template}!")
+        st.success(f"Laporan berhasil dibuat!")
         
-        # Nama file otomatis mendeteksi warna template biar gak bingung pas didownload
-        warna = "Biru" if pilihan_template == "Template Biru" else "Orange"
+        # Format nama file otomatis sesuai dengan yang kamu inginkan
+        nama_file_download = f"Daily Report_Managed Service_Universitas Jember_{teks_tgl_indo}.docx"
+        
         st.download_button(
-            label=f"⬇️ Download Hasil Laporan ({warna})",
+            label=f"⬇️ Download {nama_file_download}",
             data=final_docx.getvalue(),
-            file_name=f"Daily_Report_{warna}_{lok}_{tgl}.docx",
+            file_name=nama_file_download,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             use_container_width=True
         )
