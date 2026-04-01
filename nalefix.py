@@ -5,11 +5,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 import datetime
 
-def generate_report(tgl, lokasi, kegiatan_data, kendala_data, followup_data, ip_photos):
+# Tambahkan parameter 'template_file' di fungsi ini
+def generate_report(template_file, tgl, lokasi, kegiatan_data, kendala_data, followup_data, ip_photos):
     try:
-        doc = Document('template_kosong.docx')
+        # Kodenya sekarang membaca file sesuai pilihanmu di web
+        doc = Document(template_file)
     except Exception as e:
-        st.error("Error: File 'template_kosong.docx' tidak ditemukan!")
+        st.error(f"Error: File '{template_file}' tidak ditemukan di folder!")
         return None
 
     # 1. INFORMASI UMUM (Tabel Index 0)
@@ -59,7 +61,6 @@ def generate_report(tgl, lokasi, kegiatan_data, kendala_data, followup_data, ip_
     # 5. LAMPIRAN FOTO (Tabel paling bawah)
     tabel_foto = doc.tables[-1] 
     
-    # Bersihkan sisa spasi di tabel template
     for row in tabel_foto.rows:
         for cell in row.cells:
             cell.text = ""
@@ -97,13 +98,27 @@ st.set_page_config(page_title="Nale Report App", layout="wide")
 st.title("📊 Auto Report Generator")
 
 with st.sidebar:
-    st.header("Informasi Umum")
+    st.header("⚙️ Pengaturan Template")
+    # TAMPILAN PEMILIHAN TEMPLATE
+    pilihan_template = st.radio(
+        "Pilih Warna Kop Surat:",
+        ["Template Biru", "Template Orange"]
+    )
+    
+    # Logika penentuan nama file
+    if pilihan_template == "Template Biru":
+        file_template = "template_biru.docx"
+    else:
+        file_template = "template_orange.docx"
+
+    st.divider()
+    st.header("📝 Informasi Umum")
     tgl = st.date_input("Tanggal Report", datetime.date.today())
     lok = st.text_input("Lokasi / Site", "UNEJ")
-    st.info("Pastikan file template_kosong.docx ada di folder yang sama.")
+    st.info(f"File yang digunakan saat ini: {file_template}")
 
 # --- FORM KEGIATAN HARIAN ---
-st.subheader("📝 2. Kegiatan Harian")
+st.subheader("2. Kegiatan Harian")
 if 'kegiatan_count' not in st.session_state: st.session_state.kegiatan_count = 1
 
 kegiatan_list = []
@@ -119,12 +134,12 @@ if st.button("➕ Tambah Kegiatan"):
     st.session_state.kegiatan_count += 1
     st.rerun()
 
-# --- FORM KENDALA & FOLLOW UP (Pakai Expander biar rapi) ---
+# --- FORM KENDALA & FOLLOW UP ---
 st.divider()
 col_kendala, col_followup = st.columns(2)
 
 with col_kendala:
-    with st.expander("⚠️ 3. Kendala / Insiden (Klik untuk mengisi)"):
+    with st.expander("⚠️ 3. Kendala / Insiden"):
         if 'kendala_count' not in st.session_state: st.session_state.kendala_count = 1
         kendala_list = []
         for i in range(st.session_state.kendala_count):
@@ -138,7 +153,7 @@ with col_kendala:
             st.rerun()
 
 with col_followup:
-    with st.expander("📌 4. Follow Up (Klik untuk mengisi)"):
+    with st.expander("📌 4. Follow Up"):
         if 'fu_count' not in st.session_state: st.session_state.fu_count = 1
         followup_list = []
         for i in range(st.session_state.fu_count):
@@ -169,14 +184,18 @@ for idx, loc in enumerate(locations):
 
 st.divider()
 if st.button("🚀 Generate Report", type="primary", use_container_width=True):
-    final_docx = generate_report(str(tgl), lok, kegiatan_list, kendala_list, followup_list, ip_photos_data)
+    # Pass 'file_template' ke dalam fungsi
+    final_docx = generate_report(file_template, str(tgl), lok, kegiatan_list, kendala_list, followup_list, ip_photos_data)
     
     if final_docx:
-        st.success("Laporan berhasil dibuat!")
+        st.success(f"Laporan berhasil dibuat menggunakan {pilihan_template}!")
+        
+        # Nama file otomatis mendeteksi warna template biar gak bingung pas didownload
+        warna = "Biru" if pilihan_template == "Template Biru" else "Orange"
         st.download_button(
-            label="⬇️ Download Hasil Laporan (.docx)",
+            label=f"⬇️ Download Hasil Laporan ({warna})",
             data=final_docx.getvalue(),
-            file_name=f"Daily_Report_{lok}_{tgl}.docx",
+            file_name=f"Daily_Report_{warna}_{lok}_{tgl}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             use_container_width=True
         )
