@@ -19,13 +19,10 @@ def generate_report(template_file, tgl_indo, lokasi, kegiatan_data, kendala_data
         return None
 
     # 1. INFORMASI UMUM (Tabel Index 0)
-    # Menggunakan .add_run() agar teks ditambahkan di SAMPING tulisan yang sudah ada
-    # Catatan: Jika di template tulisan "Tanggal" ada di kolom lain, kamu bisa ubah index [0, 3] ke kolom yang sesuai.
-    cell_tgl = doc.tables[0].cell(0, 3).paragraphs[0]
-    cell_tgl.add_run(" " + tgl_indo if cell_tgl.text else tgl_indo)
-
-    cell_lokasi = doc.tables[0].cell(1, 3).paragraphs[0]
-    cell_lokasi.add_run(" " + lokasi if cell_lokasi.text else lokasi)
+    # Menggunakan index [-1] untuk menargetkan sel/kotak PALING KANAN yang kosong 
+    # agar tidak menimpa tulisan "Tanggal" dan "Lokasi / Site"
+    doc.tables[0].rows[0].cells[-1].text = tgl_indo
+    doc.tables[0].rows[1].cells[-1].text = lokasi
 
     # 2. KEGIATAN HARIAN (Tabel Index 1)
     tabel_kegiatan = doc.tables[1]
@@ -121,7 +118,7 @@ with st.sidebar:
     tgl_input = st.date_input("Tanggal Report", datetime.date.today())
     lok = st.text_input("Lokasi / Site", "UNEJ")
     
-    # Mengubah format inputan kalender menjadi format Indonesia (ex: 1 April 2025)
+    # Mengubah format inputan kalender menjadi format Indonesia (ex: 1 April 2026)
     teks_tgl_indo = format_tanggal_indo(tgl_input)
     st.info(f"Tanggal di laporan: {teks_tgl_indo}")
 
@@ -132,7 +129,7 @@ if 'kegiatan_count' not in st.session_state: st.session_state.kegiatan_count = 1
 kegiatan_list = []
 for i in range(st.session_state.kegiatan_count):
     col_w, col_u, col_k, col_s = st.columns([1.5, 3, 2, 1])
-    with col_w: wkt = st.text_input(f"Waktu", "07.30-14.30", key=f"w{i}", label_visibility="collapsed" if i>0 else "visible")
+    with col_w: wkt = st.text_input(f"Waktu", "08.00-16.00", key=f"w{i}", label_visibility="collapsed" if i>0 else "visible")
     with col_u: uraian = st.text_input(f"Uraian", "Stand By On Site dan Monitoring IP UNEJ", key=f"u{i}", label_visibility="collapsed" if i>0 else "visible")
     with col_k: ket = st.text_input(f"Keterangan", "-", key=f"k{i}", label_visibility="collapsed" if i>0 else "visible")
     with col_s: stat = st.selectbox(f"Status", ["Selesai", "Proses", "Pending"], key=f"s{i}", label_visibility="collapsed" if i>0 else "visible")
