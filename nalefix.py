@@ -116,7 +116,7 @@ with st.sidebar:
     st.header("📝 Informasi Umum")
     # Input tanggal dari user
     tgl_input = st.date_input("Tanggal Report", datetime.date.today())
-    lok = st.text_input("Lokasi / Site", "UNEJ")
+    lok = st.text_input("Lokasi / Site", "UNIVERSITAS JEMBER")
     
     # Mengubah format inputan kalender menjadi format Indonesia (ex: 1 April 2026)
     teks_tgl_indo = format_tanggal_indo(tgl_input)
